@@ -1,6 +1,8 @@
 import tweepy
 import argparse
 import pdb
+import string
+
 # Import authentication information
 import auth
 
@@ -22,32 +24,23 @@ def is_retweeted(tweet):
 # Return text clean of media
 def clean_status(status):
     text = status.full_text
-    print(text)
     categories = status.entities.keys()
-    # Hashtags
     if "hashtags" in categories:
-        print("HASHTAGS:")
         for hashtag in status.entities["hashtags"]:
-            print(hashtag)
-            # Add a hashtag and remove the word from the text
             text = text.replace("#" + hashtag["text"], "")
     if "symbols" in categories:
-        print("SYMBOLS:")
         for symbol in status.entities["hashtags"]:
-            print(symbol)
+            pass
     if "user_mentions" in categories:
-        print("USER MENTIONS:")
         for mention in status.entities["user_mentions"]:
-            print(mention)
+            text = text.replace("@" + mention["screen_name"], "")
     if "urls" in categories:
-        print("URLS:")
         for url in status.entities["urls"]:
-            print(url)
+            text = text.replace(url["url"], "")
     if "media" in categories:
-        print("MEDIA:")
         for medium in status.entities["media"]:
-            print(medium)
-    print(text)
+            text = text.replace(medium["url"], "")
+    return text
 
     
     
@@ -68,13 +61,18 @@ if __name__ == "__main__":
     # Create API object
     api = authenticate_api()
     # Process tweets as they come, up until a certain number
+    corpus = []
     counter = 0
-    for tweet in tweepy.Cursor(api.user_timeline).items():
+    for tweet in tweepy.Cursor(api.user_timeline, id=args.account).items():
         if counter >= args.num:
             break
         elif not args.originals or not is_retweeted(tweet):
-            print("")
             status = api.get_status(tweet.id, tweet_mode='extended')
-            text = status.full_text
-            clean_status(status)
+            # Clean the status (removing all mentions, media links, etc.)
+            text = clean_status(status)
+            # Remove punctuation
+            translator = str.maketrans(string.punctuation, ' '*len(string.punctuation))
+            text = text.translate(translator)
+            text = text.split()
+            corpus.append(text)
             counter += 1
