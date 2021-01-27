@@ -3,9 +3,6 @@ import argparse
 import pdb
 import string
 import itertools
-import tensorflow as tf
-import nltk
-import numpy as np
 import datetime
 import demoji
 import io
