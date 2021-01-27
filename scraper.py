@@ -2,10 +2,20 @@ import tweepy
 import argparse
 import pdb
 import string
+import itertools
+import tensorflow as tf
+import nltk
+import numpy as np
+import datetime
+import demoji
+import io
 
 # Import authentication information
 import auth
 
+demoji.download_codes()
+
+SEQ_LEN = 2
 
 # Connect to API 
 def authenticate_api():
@@ -24,6 +34,7 @@ def is_retweeted(tweet):
 # Return text clean of media
 def clean_status(status):
     text = status.full_text
+    text = demoji.replace(text, "")
     categories = status.entities.keys()
     if "hashtags" in categories:
         for hashtag in status.entities["hashtags"]:
@@ -40,10 +51,27 @@ def clean_status(status):
     if "media" in categories:
         for medium in status.entities["media"]:
             text = text.replace(medium["url"], "")
+    # Remove punctuation
+    translator = str.maketrans(string.punctuation, ' '*len(string.punctuation))
+    text = text.translate(translator)
+    text = text.lower()
+    text = " ".join(text.split())
     return text
 
-    
-    
+def remove_repeats(data):
+    # Remove repeated words
+    z = []
+    for i in data.split():
+        if i not in z:
+            z.append(i)
+    data = ' '.join(z)
+    return data
+
+def save_corpus(corpus, filename):
+    lines = "\n".join([' '.join(words) for words in corpus])
+    with io.open(filename, 'w', encoding="utf-8") as f:
+        f.write(lines)
+    print("Saved to", filename)
 
 # Clean any links
 
@@ -56,6 +84,8 @@ if __name__ == "__main__":
         help = "Number of tweets to scrape.")
     parser.add_argument("--originals", action="store_true", default=False, \
         help = "Keep original tweets and ignore retweets.")
+    parser.add_argument("--output", "-o", default=None, action="store", \
+        help = "Number of tweets to scrape.")
     args = parser.parse_args()
     print("Processing account", args.account)
     # Create API object
@@ -70,9 +100,13 @@ if __name__ == "__main__":
             status = api.get_status(tweet.id, tweet_mode='extended')
             # Clean the status (removing all mentions, media links, etc.)
             text = clean_status(status)
-            # Remove punctuation
-            translator = str.maketrans(string.punctuation, ' '*len(string.punctuation))
-            text = text.translate(translator)
+            print(counter, "::", text)
             text = text.split()
             corpus.append(text)
             counter += 1
+    # Save corpus
+    now = datetime.datetime.now()
+    filename = (args.account + "_" + str(args.num) + "_" \
+        + now.strftime("%Y-%m-%d_%H-%M-%S") + ".twt")\
+             if args.output is None else args.output
+    save_corpus(corpus, filename)
