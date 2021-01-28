@@ -4,7 +4,7 @@ import argparse
 import io
 import numpy as np
 
-SEQ_LEN = 2
+SEQ_LEN = 1
 
 def load_corpus(filename):
     corpus = []
@@ -47,34 +47,24 @@ if __name__ == "__main__":
     X = []
     y = []
     for i in sequences:
-        X.append(i[0])
-        y.append(i[1])
+        X.append(i[:SEQ_LEN])
+        y.append(i[-1])
     X = np.array(X)
     y = tf.keras.utils.to_categorical((np.array(y)), num_classes=vocab_size)
-    print(X[:10])
-    print(y[:10])
+    print(X[-10:])
+    print(y[-10:])
 
     # CREATE MODEL
 
     def get_LSTM(vocab_size):
         model = tf.keras.Sequential()
-        model.add(tf.keras.layers.Embedding(vocab_size, 10, input_length=1))
-        model.add(tf.keras.layers.LSTM(1024, return_sequences=True))
-        model.add(tf.keras.layers.LSTM(1024))
-        model.add(tf.keras.layers.Dense(2048, activation="relu"))
+        model.add(tf.keras.layers.Embedding(vocab_size, 10, input_length=SEQ_LEN))
+        model.add(tf.keras.layers.LSTM(64, return_sequences=True))
+        model.add(tf.keras.layers.LSTM(128))
+        model.add(tf.keras.layers.Dense(256, activation="relu"))
         model.add(tf.keras.layers.Dense(vocab_size, activation="softmax"))
         return model
 
-    # Callbacks, but I don't think they're required but they might help?
-    # from tensorflow.keras.callbacks import ModelCheckpoint
-    # from tensorflow.keras.callbacks import ReduceLROnPlateau
-    # from tensorflow.keras.callbacks import TensorBoard
-    # checkpoint = ModelCheckpoint("nextword1.h5", monitor='loss', verbose=1,
-    #     save_best_only=True, mode='auto')
-    # reduce = ReduceLROnPlateau(monitor='loss', factor=0.2, patience=3, min_lr=0.0001, verbose = 1)
-    # logdir='logsnextword1'
-    # tensorboard_Visualization = TensorBoard(log_dir=logdir)
-
     model = get_LSTM(vocab_size)
-    model.compile(loss="categorical_crossentropy", optimizer=tf.keras.optimizers.Adam(lr=0.001), metrics=['accuracy'])
-    model.fit(X, y, epochs=150, batch_size=64)#, callbacks=[checkpoint, reduce, tensorboard_Visualization])
+    model.compile(loss="categorical_crossentropy", optimizer=tf.keras.optimizers.RMSprop(lr=0.001), metrics=['accuracy'])
+    run = model.fit(X, y, epochs=100, validation_split=0.2, batch_size=128, shuffle=True)

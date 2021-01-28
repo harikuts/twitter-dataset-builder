@@ -6,13 +6,18 @@ import itertools
 import datetime
 import demoji
 import io
+import nltk
+from nltk.corpus import stopwords
+from nltk.corpus import words
+import time
 
 # Import authentication information
 import auth
 
-demoji.download_codes()
+# demoji.download_codes()
 
-SEQ_LEN = 2
+STOP_WORDS = set(stopwords.words('english'))
+WORDS = set(words.words())
 
 # Connect to API 
 def authenticate_api():
@@ -52,7 +57,9 @@ def clean_status(status):
     translator = str.maketrans(string.punctuation, ' '*len(string.punctuation))
     text = text.translate(translator)
     text = text.lower()
-    text = " ".join(text.split())
+    text = [word for word in text.split() if word in WORDS]
+    text = text.split()
+    text = " ".join(text)
     return text
 
 def remove_repeats(data):
@@ -81,8 +88,10 @@ if __name__ == "__main__":
         help = "Number of tweets to scrape.")
     parser.add_argument("--originals", action="store_true", default=False, \
         help = "Keep original tweets and ignore retweets.")
+    parser.add_argument("--wait", action="store_true", default=False, \
+        help = "Wait between tweet retrieval limits. If not enabled, scraper will exit and save at current point.")
     parser.add_argument("--output", "-o", default=None, action="store", \
-        help = "Number of tweets to scrape.")
+        help = "Output filename. If not included, a name will be generated.")
     args = parser.parse_args()
     print("Processing account", args.account)
     # Create API object
@@ -94,16 +103,28 @@ if __name__ == "__main__":
         if counter >= args.num:
             break
         elif not args.originals or not is_retweeted(tweet):
-            status = api.get_status(tweet.id, tweet_mode='extended')
-            # Clean the status (removing all mentions, media links, etc.)
-            text = clean_status(status)
-            print(counter, "::", text)
-            text = text.split()
-            corpus.append(text)
-            counter += 1
+            try:
+                status = api.get_status(tweet.id, tweet_mode='extended')
+                # Clean the status (removing all mentions, media links, etc.)
+                text = clean_status(status)
+                if text != "":
+                    print(counter, "::", text)
+                    text = text.split()
+                    corpus.append(text)
+                    counter += 1
+            except tweepy.error.RateLimitError:
+                if not args.wait:
+                    break
+                else:
+                    print("Waiting out the tweet retrieval limit. (%s)" % (datetime.datetime.now().strftime("%H:%M:%S")))
+                    time.sleep(900)
+            except Exception as e:
+                print(e)
+                break
+
     # Save corpus
     now = datetime.datetime.now()
-    filename = (args.account + "_" + str(args.num) + "_" \
+    filename = (args.account + "_" + str(counter) + "_" \
         + now.strftime("%Y-%m-%d_%H-%M-%S") + ".twt")\
              if args.output is None else args.output
     save_corpus(corpus, filename)
