@@ -57,10 +57,16 @@ def clean_status(status):
     translator = str.maketrans(string.punctuation, ' '*len(string.punctuation))
     text = text.translate(translator)
     text = text.lower()
-    text = [word for word in text.split() if word in WORDS]
-    text = text.split()
-    text = " ".join(text)
     return text
+
+def ultra_clean(text):
+    clean_text = []
+    for word in text.split():
+        clean_text.append(word if (word in WORDS and word not in STOP_WORDS) else "\n")
+        clean_text.append(word if word in WORDS else "\n")
+    clean_text = " ".join(clean_text)
+    sub_texts = clean_text.split("\n")
+    return sub_texts
 
 def remove_repeats(data):
     # Remove repeated words
@@ -109,15 +115,17 @@ if __name__ == "__main__":
                 text = clean_status(status)
                 if text != "":
                     print(counter, "::", text)
-                    text = text.split()
-                    corpus.append(text)
+                    sub_texts = ultra_clean(text)
+                    for sub_text in sub_texts:
+                        sub_text = sub_text.split()
+                        corpus.append(sub_text)
                     counter += 1
             except tweepy.error.RateLimitError:
                 if not args.wait:
                     break
                 else:
                     print("Waiting out the tweet retrieval limit. (%s)" % (datetime.datetime.now().strftime("%H:%M:%S")))
-                    time.sleep(900)
+                    time.sleep(60)
             except Exception as e:
                 print(e)
                 break
