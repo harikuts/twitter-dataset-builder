@@ -62,7 +62,7 @@ def clean_status(status):
 def ultra_clean(text):
     clean_text = []
     for word in text.split():
-        clean_text.append(word if (word in WORDS and word not in STOP_WORDS) else "\n")
+        # clean_text.append(word if (word in WORDS and word not in STOP_WORDS) else "\n")
         clean_text.append(word if word in WORDS else "\n")
     clean_text = " ".join(clean_text)
     sub_texts = clean_text.split("\n")
