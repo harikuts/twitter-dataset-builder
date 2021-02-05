@@ -2,19 +2,15 @@ import itertools
 import tensorflow as tf
 import argparse
 import io
+import os
 import numpy as np
-import nltk
-from nltk.corpus import words
 import matplotlib.pyplot as plt
-
-import tensorflow.compat.v1 as tf1
-tf1.disable_v2_behavior()
 import tensorflow as tf
+
+# Required for server job compatibility
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+
 # from tensorflow.compat.v1.nn.rnn_cell import CoupledInputForgetGateLSTMCell
-
-
-WORDS = list(words.words())
-
 def load_corpus(filenames):
     corpus = []
     for filename in filenames:
@@ -137,11 +133,11 @@ if __name__ == "__main__":
     plt.ylabel('accuracy')
     plt.xlabel('epoch')
     plt.legend(['train', 'test'], loc='upper left')
-    plt.show()
+    plt.savefig("accuracy.png")
     plt.plot(history['loss'])
     plt.plot(history['val_loss'])
     plt.title('model loss')
     plt.ylabel('loss')
     plt.xlabel('epoch')
     plt.legend(['train', 'test'], loc='upper left')
-    plt.show()
+    plt.show("loss.png")
